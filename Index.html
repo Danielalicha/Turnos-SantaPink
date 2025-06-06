@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Turnos Online - Santa Pink</title>
+    
+    <!-- PWA Manifest Link -->
+    <link rel="manifest" href="manifest.json">
+
+    <!-- PWA Theme Color -->
+    <meta name="theme-color" content="#1f2937">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <style>
+        /* Custom styles for Dark Theme */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #000000;
+        }
+
+        .text-pop {
+           text-shadow: 1px 1px 5px rgba(236, 72, 153, 0.5);
+        }
+
+        /* Hides the scrollbar for the date selector but keeps it scrollable */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
+
+        .time-slot {
+            transition: all 0.2s ease-in-out;
+        }
+        .time-slot:not(.disabled):hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px -1px rgba(236, 72, 153, 0.2);
+        }
+        .disabled {
+            background-color: #374151; /* gray-700 */
+            color: #9ca3af; /* gray-400 */
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+        .selected-day {
+            background-color: #ec4899 !important; /* pink-500 */
+            color: white !important;
+            border-color: #ec4899;
+        }
+        /* Custom Modal styles */
+        .modal-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 50;
+        }
+        .modal-content {
+            background-color: #1f2937; /* gray-800 */
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            border: 1px solid #374151;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            width: 90%;
+            max-width: 500px;
+        }
+    </style>
+</head>
+<body class="antialiased text-gray-200">
+
+    <div id="app" class="container mx-auto p-4 md:p-8 max-w-7xl">
+
+        <!-- Header -->
+        <header class="text-center mb-8">
+            <h1 class="text-5xl font-bold text-pink-500 text-pop" style="font-family: 'Brush Script MT', cursive;">Santa Pink</h1>
+            <p class="mt-2 text-lg text-pink-300 font-semibold text-pop">Restauración capilar personalizada</p>
+            <div id="auth-status" class="mt-4 text-sm text-gray-400">
+                <p>Estado: <span id="auth-state-text">Conectando...</span></p>
+            </div>
+        </header>
+
+        <!-- Loading Indicator -->
+        <div id="loading" class="text-center py-12">
+            <i class="fas fa-spinner fa-spin text-4xl text-pink-500"></i>
+            <p class="mt-2 text-lg text-gray-300">Cargando turnos...</p>
+        </div>
+
+        <main id="main-content" class="hidden">
+            <!-- Gemini AI Assistant Section -->
+            <div class="bg-gray-900/70 backdrop-blur-sm p-6 rounded-xl shadow-2xl border border-gray-800 mb-8">
+                <h2 class="text-2xl font-bold mb-4 text-pink-400 text-pop"><i class="fas fa-magic-wand-sparkles mr-2"></i> Asistente de Belleza Virtual</h2>
+                <p class="text-gray-400 mb-4">¿No estás segura de qué servicio elegir? Responde estas preguntas y nuestra IA te dará una recomendación.</p>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label for="hair-type" class="block text-sm font-medium text-gray-300 mb-1">¿Cuál es tu tipo de cabello?</label>
+                        <select id="hair-type" class="w-full bg-gray-800 border-gray-700 rounded-md p-2 text-gray-200 focus:ring-pink-500 focus:border-pink-500">
+                            <option>Normal</option>
+                            <option>Seco y dañado</option>
+                            <option>Graso</option>
+                            <option>Fino y sin volumen</option>
+                            <option>Teñido</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="hair-goal" class="block text-sm font-medium text-gray-300 mb-1">¿Cuál es tu objetivo?</label>
+                        <select id="hair-goal" class="w-full bg-gray-800 border-gray-700 rounded-md p-2 text-gray-200 focus:ring-pink-500 focus:border-pink-500">
+                            <option>Reparar y nutrir</option>
+                            <option>Cambiar de look (color)</option>
+                            <option>Cambiar de look (corte)</option>
+                            <option>Más brillo y suavidad</option>
+                            <option>Controlar el frizz</option>
+                        </select>
+                    </div>
+                </div>
+
+                <button id="get-recommendation-btn" class="w-full flex justify-center items-center px-6 py-2 border border-pink-500 rounded-md shadow-sm text-base font-medium text-pink-400 bg-pink-900/20 hover:bg-pink-800/30">
+                    <span id="recommendation-btn-text">✨ Obtener Recomendación</span>
+                    <i id="recommendation-spinner" class="fas fa-spinner fa-spin ml-2 hidden"></i>
+                </button>
+
+                <div id="recommendation-result" class="mt-4 p-4 bg-gray-800/90 rounded-md border border-pink-900 hidden">
+                    <!-- AI Recommendation will be injected here -->
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- Booking Section -->
+                <div class="lg:col-span-2 bg-gray-900/70 backdrop-blur-sm p-6 rounded-xl shadow-2xl border border-gray-800">
+                    <h2 class="text-2xl font-bold mb-4 border-b border-gray-700 pb-2 text-pink-400 text-pop">1. Selecciona un Día</h2>
+                    <div class="no-scrollbar overflow-x-auto pb-2">
+                        <div id="date-selector" class="flex flex-nowrap gap-2">
+                            <!-- Date buttons will be injected here by JS -->
+                        </div>
+                    </div>
+
+                    <h2 class="text-2xl font-bold mt-6 mb-4 border-b border-gray-700 pb-2 text-pink-400 text-pop">2. Elige un Horario</h2>
+                    <div id="time-slots-container" class="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-3">
+                        <!-- Time slots will be injected here by JS -->
+                    </div>
+                     <p id="no-slots-message" class="text-center text-gray-400 mt-6 hidden">No hay turnos disponibles para el día seleccionado o ya pasaron los horarios.</p>
+                </div>
+
+                <!-- My Appointments Section -->
+                <div class="bg-gray-900/70 backdrop-blur-sm p-6 rounded-xl shadow-2xl border border-gray-800">
+                    <h2 class="text-2xl font-bold mb-4 text-pink-400 text-pop"><i class="fas fa-user-clock mr-2"></i>Mis Turnos</h2>
+                    <div id="my-appointments" class="space-y-3">
+                        <!-- User's appointments will be listed here -->
+                        <p id="no-my-appointments" class="text-gray-400">Aún no tienes turnos reservados.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Admin Section -->
+            <div class="mt-12 bg-gray-900/70 backdrop-blur-sm p-6 rounded-xl shadow-2xl border border-gray-800">
+                <h2 class="text-2xl font-bold mb-4 text-pink-400 text-pop"><i class="fas fa-users-cog mr-2"></i>Panel de Administrador</h2>
+                <div id="all-appointments" class="space-y-3">
+                    <!-- All appointments will be listed here -->
+                     <p id="no-all-appointments" class="text-gray-400">No hay turnos reservados en el sistema.</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Payment Modal -->
+    <div id="payment-modal" class="modal-backdrop hidden">
+        <div class="modal-content text-left text-gray-200">
+            <h3 class="text-xl font-bold mb-3 text-pink-400">Confirma tu Turno</h3>
+            <p class="mb-4">Para confirmar tu reserva para el <strong id="modal-date-time" class="text-pink-400"></strong>, por favor sigue los pasos:</p>
+            
+            <div class="space-y-4">
+                <div>
+                    <p class="font-semibold text-gray-300">Paso 1: Copia nuestro alias</p>
+                    <div class="mt-1 flex rounded-md shadow-sm">
+                        <span class="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-600 bg-gray-700 text-gray-300 sm:text-sm">Alias</span>
+                        <input type="text" id="alias-input" value="santarosa1993" readonly class="flex-1 min-w-0 block w-full px-3 py-2 rounded-none bg-gray-800 border-gray-600 focus:ring-pink-500 focus:border-pink-500 sm:text-sm">
+                        <button id="copy-alias-btn" class="inline-flex items-center px-3 py-2 border border-gray-600 rounded-r-md bg-gray-700 text-gray-300 hover:bg-gray-600">
+                            <i class="fas fa-copy mr-2"></i> <span id="copy-btn-text">Copiar</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div>
+                    <p class="font-semibold text-gray-300">Paso 2: Realiza el pago</p>
+                    <p class="text-sm text-gray-400">Abre tu app de banco o billetera virtual y transfiere la seña a nuestro alias.</p>
+                </div>
+
+                <div>
+                    <p class="font-semibold text-gray-300">Paso 3: Elige el servicio</p>
+                    <div id="service-selector" class="mt-2 space-y-2">
+                        <label class="flex items-center">
+                            <input type="radio" name="service" value="Tratamiento capilar" class="h-4 w-4 text-pink-600 bg-gray-700 border-gray-600 focus:ring-pink-500" required>
+                            <span class="ml-3 text-gray-300">Tratamiento capilar</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="radio" name="service" value="Color y mechas" class="h-4 w-4 text-pink-600 bg-gray-700 border-gray-600 focus:ring-pink-500">
+                            <span class="ml-3 text-gray-300">Color y mechas</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="radio" name="service" value="Corte" class="h-4 w-4 text-pink-600 bg-gray-700 border-gray-600 focus:ring-pink-500">
+                            <span class="ml-3 text-gray-300">Corte</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div>
+                    <p class="font-semibold text-gray-300">Paso 4: Confirma y avísanos por WhatsApp</p>
+                    <p class="text-sm text-gray-400 mb-2">Al hacer clic, tu turno quedará reservado y se abrirá WhatsApp para que nos envíes el comprobante.</p>
+                    <button id="whatsapp-confirm-btn" class="w-full flex justify-center items-center px-6 py-3 border border-transparent rounded-md shadow-sm text-base font-medium text-white bg-green-600 hover:bg-green-700">
+                        <i class="fab fa-whatsapp mr-3 text-xl"></i>
+                        Confirmar y Enviar WhatsApp
+                    </button>
+                </div>
+            </div>
+
+            <div class="mt-5 text-right">
+                <button id="modal-cancel-btn" class="px-4 py-2 bg-gray-600 hover:bg-gray-500 rounded-md font-semibold text-sm">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Care Tips Modal -->
+    <div id="care-tips-modal" class="modal-backdrop hidden">
+        <div class="modal-content text-left text-gray-200">
+            <h3 class="text-xl font-bold mb-3 text-blue-400">✨ Consejos de Cuidado Personalizados</h3>
+            <div id="care-tips-content" class="space-y-2 text-gray-300">
+                <!-- AI-generated care tips will be injected here -->
+            </div>
+            <div class="mt-5 text-right">
+                <button id="care-tips-close-btn" class="px-4 py-2 bg-gray-600 hover:bg-gray-500 rounded-md font-semibold text-sm">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- PWA Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js').then(registration => {
+                    console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                }, err => {
+                    console.log('ServiceWorker registration failed: ', err);
+                });
+            });
+        }
+    </script>
+    
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getFirestore, collection, onSnapshot, addDoc, doc, deleteDoc, serverTimestamp, query, where, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+
+        // --- CONFIGURATION ---
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-santa-pink-app-pwa';
+
+        // --- DOM ELEMENTS ---
+        const loadingEl = document.getElementById('loading');
+        const mainContentEl = document.getElementById('main-content');
+        const dateSelectorEl = document.getElementById('date-selector');
+        const timeSlotsContainerEl = document.getElementById('time-slots-container');
+        const myAppointmentsEl = document.getElementById('my-appointments');
+        const allAppointmentsEl = document.getElementById('all-appointments');
+        const noMyAppointmentsMsg = document.getElementById('no-my-appointments');
+        const noAllAppointmentsMsg = document.getElementById('no-all-appointments');
+        const noSlotsMessage = document.getElementById('no-slots-message');
+        const authStateText = document.getElementById('auth-state-text');
+        
+        // Gemini AI Elements
+        const getRecommendationBtn = document.getElementById('get-recommendation-btn');
+        const recommendationResult = document.getElementById('recommendation-result');
+        const hairTypeSelect = document.getElementById('hair-type');
+        const hairGoalSelect = document.getElementById('hair-goal');
+        const recommendationSpinner = document.getElementById('recommendation-spinner');
+        const recommendationBtnText = document.getElementById('recommendation-btn-text');
+        const careTipsModal = document.getElementById('care-tips-modal');
+        const careTipsContent = document.getElementById('care-tips-content');
+        const careTipsCloseBtn = document.getElementById('care-tips-close-btn');
+
+        // Modal Elements
+        const paymentModal = document.getElementById('payment-modal');
+        const modalDateTime = document.getElementById('modal-date-time');
+        const copyAliasBtn = document.getElementById('copy-alias-btn');
+        const whatsappConfirmBtn = document.getElementById('whatsapp-confirm-btn');
+        const modalCancelBtn = document.getElementById('modal-cancel-btn');
+        const copyBtnText = document.getElementById('copy-btn-text');
+
+        // --- STATE ---
+        let db, auth;
+        let userId = null;
+        let bookedAppointments = [];
+        let selectedDate = null;
+        let unsubscribe = null;
+
+        // --- TIME & DATE CONFIG ---
+        const TIME_SLOTS = [
+            '09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30',
+            '15:00', '15:30', '16:00', '16:30', '17:00', '17:30', '18:00', '18:30',
+            '19:00', '19:30', '20:00', '20:30', '21:00', '21:30', '22:00'
+        ];
+        const NUMBER_OF_DAYS = 30; 
+
+        // --- INITIALIZATION ---
+        document.addEventListener('DOMContentLoaded', initializeAppAndAuth);
+        
+        async function initializeAppAndAuth() {
+            try {
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+                
+                onAuthStateChanged(auth, user => {
+                    if (user) {
+                        userId = user.uid;
+                        authStateText.textContent = "Conectado";
+                        console.log("Authenticated with user ID:", userId);
+                        setupRealtimeListener();
+                    } else {
+                        userId = null;
+                        authStateText.textContent = "Desconectado";
+                         if (unsubscribe) unsubscribe();
+                    }
+                });
+
+                const initialToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+                if (initialToken) {
+                    await signInWithCustomToken(auth, initialToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                setupUI();
+            } catch (error) {
+                console.error("Firebase initialization failed:", error);
+                loadingEl.innerHTML = '<p class="text-red-500">Error al conectar con el servicio.</p>';
+            }
+        }
+
+        function setupUI() {
+            renderDateSelectors();
+            setupEventListeners();
+        }
+
+        function setupRealtimeListener() {
+            if (!userId) return;
+            const appointmentsCollectionRef = collection(db, `artifacts/${appId}/public/data/appointments`);
+            if(unsubscribe) unsubscribe(); 
+            unsubscribe = onSnapshot(appointmentsCollectionRef, (snapshot) => {
+                bookedAppointments = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                loadingEl.classList.add('hidden');
+                mainContentEl.classList.remove('hidden');
+                if (selectedDate) renderTimeSlots(selectedDate);
+                renderMyAppointments();
+                renderAllAppointments();
+            }, (error) => {
+                console.error("Error listening to appointments:", error);
+            });
+        }
+
+        // --- RENDERING FUNCTIONS ---
+        function renderDateSelectors() {
+            dateSelectorEl.innerHTML = '';
+            let today = new Date();
+            for (let i = 0; i < NUMBER_OF_DAYS; i++) {
+                let date = new Date(today);
+                date.setDate(today.getDate() + i);
+                const dateString = date.toISOString().split('T')[0]; 
+                const dayName = date.toLocaleDateString('es-ES', { weekday: 'short' }).slice(0, 3);
+                const dayNumber = date.getDate();
+                const button = document.createElement('button');
+                button.className = 'f
